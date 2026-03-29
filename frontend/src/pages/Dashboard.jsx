@@ -5,24 +5,55 @@ import api from '../api';
 function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [planForm, setPlanForm] = useState({ subject: '', hours: '', date: '' });
+  const [planError, setPlanError] = useState('');
+  const [planLoading, setPlanLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const handleAuthFailure = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login', { replace: true });
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const response = await api.get('/study-plan');
+      setPlans(response.data);
+    } catch (requestError) {
+      const statusCode = requestError.response?.status;
+      const message = requestError.response?.data?.message || 'Unable to load study plans';
+
+      if (statusCode === 401 || statusCode === 403) {
+        handleAuthFailure();
+        return;
+      }
+
+      setPlanError(message);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
       try {
-        const response = await api.get('/user/me');
-        setUser(response.data);
+        const [userResponse, plansResponse] = await Promise.all([
+          api.get('/user/me'),
+          api.get('/study-plan'),
+        ]);
+
+        setUser(userResponse.data);
+        setPlans(plansResponse.data);
         setError('');
+        setPlanError('');
       } catch (requestError) {
         const statusCode = requestError.response?.status;
         const message = requestError.response?.data?.message || 'Unable to load user details';
 
         if (statusCode === 401 || statusCode === 403) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login', { replace: true });
+          handleAuthFailure();
           return;
         }
 
@@ -34,6 +65,40 @@ function Dashboard() {
 
     fetchUserData();
   }, [navigate]);
+
+  const handlePlanChange = (event) => {
+    const { name, value } = event.target;
+    setPlanForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlanSubmit = async (event) => {
+    event.preventDefault();
+    setPlanError('');
+    setPlanLoading(true);
+
+    try {
+      await api.post('/study-plan', {
+        subject: planForm.subject,
+        hours: Number(planForm.hours),
+        date: planForm.date,
+      });
+
+      setPlanForm({ subject: '', hours: '', date: '' });
+      await fetchPlans();
+    } catch (requestError) {
+      const statusCode = requestError.response?.status;
+      const message = requestError.response?.data?.message || 'Unable to create study plan';
+
+      if (statusCode === 401 || statusCode === 403) {
+        handleAuthFailure();
+        return;
+      }
+
+      setPlanError(message);
+    } finally {
+      setPlanLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -54,6 +119,52 @@ function Dashboard() {
           <p>
             Signed in as: <strong>{user.email}</strong>
           </p>
+
+          <h2>Study Planner</h2>
+          <form onSubmit={handlePlanSubmit} className="auth-form">
+            <input
+              type="text"
+              name="subject"
+              placeholder="Subject"
+              value={planForm.subject}
+              onChange={handlePlanChange}
+              required
+            />
+            <input
+              type="number"
+              name="hours"
+              min="1"
+              placeholder="Hours"
+              value={planForm.hours}
+              onChange={handlePlanChange}
+              required
+            />
+            <input
+              type="date"
+              name="date"
+              value={planForm.date}
+              onChange={handlePlanChange}
+              required
+            />
+            {planError && <p className="error-text">{planError}</p>}
+            <button type="submit" disabled={planLoading}>
+              {planLoading ? 'Saving...' : 'Add Plan'}
+            </button>
+          </form>
+
+          <h3>Your Plans</h3>
+          {plans.length === 0 ? (
+            <p>No study plans added yet.</p>
+          ) : (
+            <ul>
+              {plans.map((plan) => (
+                <li key={plan.id}>
+                  <strong>{plan.subject}</strong> - {plan.hours} hour(s) on{' '}
+                  {new Date(plan.date).toLocaleDateString()}
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
       <button onClick={handleLogout}>Logout</button>

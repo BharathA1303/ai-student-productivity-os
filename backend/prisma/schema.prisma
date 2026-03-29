@@ -17,6 +17,16 @@ model User {
   name      String
   email     String   @unique
   password  String
+  studyPlans StudyPlan[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model StudyPlan {
+  id      Int      @id @default(autoincrement())
+  userId  Int
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject String
+  hours   Int
+  date    DateTime
 }

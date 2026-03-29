@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
+const studyPlanRoutes = require('./routes/studyPlan');
 const { authenticateToken } = require('./middleware/authMiddleware');
 
 dotenv.config();
@@ -21,8 +22,10 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api', authenticateToken);
+app.use('/api', studyPlanRoutes);
 
-app.get('/api/user/me', authenticateToken, (req, res) => {
+app.get('/api/user/me', (req, res) => {
   res.json({
     id: req.user.id,
     name: req.user.name,
@@ -30,7 +33,7 @@ app.get('/api/user/me', authenticateToken, (req, res) => {
   });
 });
 
-app.get('/api/dashboard', authenticateToken, (req, res) => {
+app.get('/api/dashboard', (req, res) => {
   res.json({
     message: `Welcome ${req.user.name || req.user.email}!`,
     user: {

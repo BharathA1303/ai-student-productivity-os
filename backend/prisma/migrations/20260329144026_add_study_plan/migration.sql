@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "StudyPlan" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "userId" INTEGER NOT NULL,
+    "subject" TEXT NOT NULL,
+    "hours" INTEGER NOT NULL,
+    "date" DATETIME NOT NULL,
+    CONSTRAINT "StudyPlan_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
