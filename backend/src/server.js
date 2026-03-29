@@ -22,6 +22,14 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 
+app.get('/api/user/me', authenticateToken, (req, res) => {
+  res.json({
+    id: req.user.id,
+    name: req.user.name,
+    email: req.user.email,
+  });
+});
+
 app.get('/api/dashboard', authenticateToken, (req, res) => {
   res.json({
     message: `Welcome ${req.user.name || req.user.email}!`,

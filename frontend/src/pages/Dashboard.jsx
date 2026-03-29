@@ -4,21 +4,36 @@ import api from '../api';
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchUserData = async () => {
+      setLoading(true);
       try {
-        const response = await api.get('/dashboard');
-        setData(response.data);
+        const response = await api.get('/user/me');
+        setUser(response.data);
+        setError('');
       } catch (requestError) {
-        setError(requestError.response?.data?.message || 'Unable to load dashboard');
+        const statusCode = requestError.response?.status;
+        const message = requestError.response?.data?.message || 'Unable to load user details';
+
+        if (statusCode === 401 || statusCode === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        setError(message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, []);
+    fetchUserData();
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -29,12 +44,15 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <h1>Dashboard</h1>
+      {loading && <p>Loading user data...</p>}
       {error && <p className="error-text">{error}</p>}
-      {data && (
+      {user && !loading && !error && (
         <>
-          <p>{data.message}</p>
           <p>
-            Signed in as: <strong>{data.user.email}</strong>
+            Welcome, <strong>{user.name}</strong>!
+          </p>
+          <p>
+            Signed in as: <strong>{user.email}</strong>
           </p>
         </>
       )}

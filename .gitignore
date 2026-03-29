@@ -1,0 +1,23 @@
+# Node
+node_modules
+package-lock.json
+
+# Env
+.env
+
+# Database
+dev.db
+
+# Build
+dist
+
+# Logs
+logs
+*.log
+
+# OS
+.DS_Store
+
+# Editor
+.vscode
+.idea

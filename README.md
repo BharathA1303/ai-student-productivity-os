@@ -3,7 +3,7 @@
 Full-stack starter project with:
 - Frontend: React + Vite
 - Backend: Node.js + Express
-- Database: PostgreSQL + Prisma ORM
+- Database: SQLite + Prisma ORM
 - Auth: Register/Login with bcrypt password hashing and JWT tokens
 
 ## Project Structure
@@ -22,7 +22,7 @@ Full-stack starter project with:
 
 1. Copy env template:
    - `backend/.env.example` to `backend/.env`
-2. Configure PostgreSQL `DATABASE_URL` and `JWT_SECRET` in `backend/.env`
+2. Configure `JWT_SECRET` in `backend/.env` (SQLite uses local file DB at `file:./dev.db`)
 3. Generate Prisma client:
    - `cd backend`
    - `npm run prisma:generate`
