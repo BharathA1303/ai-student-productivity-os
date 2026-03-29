@@ -9,6 +9,10 @@ function Dashboard() {
   const [planForm, setPlanForm] = useState({ subject: '', hours: '', date: '' });
   const [planError, setPlanError] = useState('');
   const [planLoading, setPlanLoading] = useState(false);
+  const [aiForm, setAiForm] = useState({ subjects: '', totalHours: '' });
+  const [aiPlan, setAiPlan] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -100,6 +104,55 @@ function Dashboard() {
     }
   };
 
+  const handleAiFormChange = (event) => {
+    const { name, value } = event.target;
+    setAiForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAiPlanSubmit = async (event) => {
+    event.preventDefault();
+    setAiError('');
+
+    const parsedSubjects = aiForm.subjects
+      .split(',')
+      .map((subject) => subject.trim())
+      .filter(Boolean);
+
+    if (parsedSubjects.length === 0) {
+      setAiError('Please enter at least one subject');
+      return;
+    }
+
+    const parsedTotalHours = Number(aiForm.totalHours);
+    if (!Number.isFinite(parsedTotalHours) || parsedTotalHours <= 0) {
+      setAiError('Please enter total hours greater than 0');
+      return;
+    }
+
+    setAiLoading(true);
+
+    try {
+      const response = await api.post('/ai-plan', {
+        subjects: parsedSubjects,
+        totalHours: parsedTotalHours,
+      });
+
+      setAiPlan(response.data);
+    } catch (requestError) {
+      const statusCode = requestError.response?.status;
+      const message = requestError.response?.data?.message || 'Unable to generate AI study plan';
+
+      if (statusCode === 401 || statusCode === 403) {
+        handleAuthFailure();
+        return;
+      }
+
+      setAiError(message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -164,6 +217,45 @@ function Dashboard() {
                 </li>
               ))}
             </ul>
+          )}
+
+          <h2>AI Study Planner</h2>
+          <form onSubmit={handleAiPlanSubmit} className="auth-form">
+            <input
+              type="text"
+              name="subjects"
+              placeholder="Subjects (comma separated)"
+              value={aiForm.subjects}
+              onChange={handleAiFormChange}
+              required
+            />
+            <input
+              type="number"
+              name="totalHours"
+              min="0.1"
+              step="0.1"
+              placeholder="Total hours"
+              value={aiForm.totalHours}
+              onChange={handleAiFormChange}
+              required
+            />
+            {aiError && <p className="error-text">{aiError}</p>}
+            <button type="submit" disabled={aiLoading}>
+              {aiLoading ? 'Generating...' : 'Generate Plan'}
+            </button>
+          </form>
+
+          {aiPlan.length > 0 && (
+            <>
+              <h3>Generated Plan</h3>
+              <ul>
+                {aiPlan.map((item) => (
+                  <li key={item.subject}>
+                    <strong>{item.subject}</strong> - {item.hours} hour(s)
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </>
       )}
