@@ -27,31 +27,60 @@ function Login() {
   };
 
   return (
-    <div className="auth-container">
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        {error && <p className="error-text">{error}</p>}
-        <button type="submit">Login</button>
-      </form>
-      <p>
-        Don&apos;t have an account? <Link to="/register">Register</Link>
-      </p>
+    <div className="auth-shell">
+      <aside className="auth-showcase">
+        <p className="brand-tag">AI Student Productivity OS</p>
+        <h1>Study Better, Every Day</h1>
+        <p>
+          Plan priorities, track progress, and generate smart schedules that adapt to your exam
+          timeline.
+        </p>
+        <ul>
+          <li>Priority-aware planning</li>
+          <li>Exam-date smart distribution</li>
+          <li>Clean dashboard workflow</li>
+        </ul>
+      </aside>
+
+      <main className="auth-panel">
+        <div className="auth-container">
+          <div className="auth-header">
+            <h2>Welcome Back</h2>
+            <p>Log in to continue your learning workflow.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              name="password"
+              placeholder="Enter password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+
+            {error && <p className="error-text">{error}</p>}
+            <button type="submit">Login</button>
+          </form>
+
+          <p className="auth-footer">
+            Don&apos;t have an account? <Link to="/register">Create one</Link>
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

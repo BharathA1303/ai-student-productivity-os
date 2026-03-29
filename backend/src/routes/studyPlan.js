@@ -4,6 +4,7 @@ const prisma = require('../prisma');
 const router = express.Router();
 
 const roundToOneDecimal = (value) => Math.round(value * 10) / 10;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 router.post('/ai-plan', (req, res) => {
   const { subjects, totalHours } = req.body;
@@ -12,50 +13,70 @@ router.post('/ai-plan', (req, res) => {
     return res.status(400).json({ message: 'Subjects must be a non-empty array' });
   }
 
-  const parsedSubjects = subjects
-    .map((subject) => (typeof subject === 'string' ? subject.trim() : ''))
-    .filter((subject) => subject.length > 0);
-
-  if (parsedSubjects.length === 0) {
-    return res.status(400).json({ message: 'Please provide at least one valid subject' });
-  }
-
-  if (parsedSubjects.length !== subjects.length) {
-    return res.status(400).json({ message: 'All subjects must be non-empty strings' });
-  }
-
   const parsedTotalHours = Number(totalHours);
 
   if (!Number.isFinite(parsedTotalHours) || parsedTotalHours <= 0) {
     return res.status(400).json({ message: 'Total hours must be a positive number' });
   }
 
-  const subjectCount = parsedSubjects.length;
-  const weights = parsedSubjects.map((_, index) => {
-    if (index === 0) {
-      return subjectCount + 2;
+  const now = Date.now();
+  const preparedSubjects = subjects.map((item, index) => {
+    const subject = typeof item?.subject === 'string' ? item.subject.trim() : '';
+    const priority = Number(item?.priority);
+    const examTimestamp = Date.parse(item?.examDate);
+
+    if (!subject) {
+      return { error: `Subject at index ${index} must be a non-empty string` };
     }
 
-    return subjectCount - index + 1;
+    if (!Number.isInteger(priority) || priority < 1 || priority > 5) {
+      return { error: `Priority for ${subject} must be an integer between 1 and 5` };
+    }
+
+    if (Number.isNaN(examTimestamp)) {
+      return { error: `Exam date for ${subject} must be a valid ISO date` };
+    }
+
+    const rawDaysLeft = Math.ceil((examTimestamp - now) / MS_PER_DAY);
+    const daysLeft = rawDaysLeft <= 0 ? 1 : rawDaysLeft;
+    const score = priority + 1 / daysLeft;
+
+    return {
+      subject,
+      priority,
+      examDate: new Date(examTimestamp).toISOString(),
+      daysLeft,
+      score,
+    };
   });
 
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  const invalidSubject = preparedSubjects.find((item) => item.error);
+  if (invalidSubject) {
+    return res.status(400).json({ message: invalidSubject.error });
+  }
+
+  const scoreSum = preparedSubjects.reduce((sum, item) => sum + item.score, 0);
+
+  if (scoreSum <= 0) {
+    return res.status(400).json({ message: 'Unable to calculate study plan scores' });
+  }
 
   let distributedHours = 0;
-  const plan = parsedSubjects.map((subject, index) => {
-    if (index === parsedSubjects.length - 1) {
+  const plan = preparedSubjects.map((item, index) => {
+    if (index === preparedSubjects.length - 1) {
       const remainingHours = roundToOneDecimal(parsedTotalHours - distributedHours);
+
       return {
-        subject,
+        subject: item.subject,
         hours: remainingHours < 0 ? 0 : remainingHours,
       };
     }
 
-    const allocatedHours = roundToOneDecimal((parsedTotalHours * weights[index]) / totalWeight);
+    const allocatedHours = roundToOneDecimal((parsedTotalHours * item.score) / scoreSum);
     distributedHours += allocatedHours;
 
     return {
-      subject,
+      subject: item.subject,
       hours: allocatedHours,
     };
   });
